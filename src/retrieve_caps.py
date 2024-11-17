@@ -113,6 +113,8 @@ def main():
     
     print('Loading data')
     images, captions = load_coco_data(coco_data_path)
+    # len images = n
+    # len caption = 5n
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     clip_model, feature_extractor = clip.load("RN50x64", device=device)
@@ -120,12 +122,17 @@ def main():
     print('Filtering captions')    
     xb_image_ids, captions = filter_captions(captions)
 
+    # len xb_image_ids = 5n
+    # len captions = 5n
     print('Encoding captions')
     encoded_captions = encode_captions(captions, clip_model, device)
-    
+    # len encoded_captions = 5n
     print('Encoding images')
     xq_image_ids, encoded_images = encode_images(images, image_path, clip_model, feature_extractor, device)
     
+    # len xq_image_ids = n
+    # len encoded_images = n
+
     print('Retrieving neighbors')
     index, nns = get_nns(encoded_captions, encoded_images)
     retrieved_caps = filter_nns(nns, xb_image_ids, captions, xq_image_ids)
