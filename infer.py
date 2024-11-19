@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, CLIPFeatureExtractor, AutoModel
 from transformers.models.auto.configuration_auto import AutoConfig
 from transformers.modeling_outputs import BaseModelOutput
 
-from src.utils import load_data_for_inference, prep_strings, postprocess_preds
+from src.utils import load_data_for_inference, prep_strings, prep_strings_new, postprocess_preds
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
@@ -81,6 +81,44 @@ def evaluate_rag_model(args, feature_extractor, tokenizer, model, eval_df):
 
     return out
 
+def evaluate_rag_model_new(args, feature_extractor, tokenizer, model, eval_df):
+    """RAG models can only be evaluated with a batch of length 1."""
+    
+    template = open(args.template_path).read().strip() + ' '
+
+    if args.features_path is not None:
+        features = h5py.File(args.features_path, 'r')
+
+    out = []
+    for idx in tqdm(range(len(eval_df))):
+        file_name = eval_df['file_name'][idx]
+        image_id = eval_df['image_id'][idx]
+        caps = eval_df['caps'][idx] # [{'caption': 'xxxx', distance: xxx}]
+        decoder_input_ids = prep_strings_new('', tokenizer, template=template, retrieved_caps=caps,
+                                                 k=int(args.k), is_test=True)
+        # load image
+        if args.features_path is not None:
+            encoder_last_hidden_state = torch.FloatTensor([features[image_id][()]])
+            encoder_outputs = BaseModelOutput(last_hidden_state=encoder_last_hidden_state.to(args.device))
+            with torch.no_grad():
+                pred = model.generate(encoder_outputs=encoder_outputs,
+                               decoder_input_ids=torch.tensor([decoder_input_ids]).to(args.device),
+                               **args.generation_kwargs)
+        else:
+            image = Image.open(args.images_dir + file_name).convert("RGB")
+            pixel_values = feature_extractor(image, return_tensors="pt").pixel_values
+            with torch.no_grad():
+                pred = model.generate(pixel_values.to(args.device),
+                               decoder_input_ids=torch.tensor([decoder_input_ids]).to(args.device),
+                               **args.generation_kwargs)
+        pred = tokenizer.decode(pred[0])
+
+        pred = postprocess_preds(pred, tokenizer)
+        out.append({"image_id": int(image_id), "caption": pred})
+
+    return out
+
+
 def load_model(args, checkpoint_path):
     config = AutoConfig.from_pretrained(checkpoint_path + '/config.json')
     model = AutoModel.from_pretrained(checkpoint_path)
@@ -135,7 +173,8 @@ def main(args):
         args.k=0
         infer_fn = evaluate_norag_model
     else:
-        infer_fn = evaluate_rag_model
+        # infer_fn = evaluate_rag_model
+        infer_fn = evaluate_rag_model_new
 
     if args.infer_test:
         split = 'test'
@@ -188,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument("--disable_rag", action="store_true", default=False, help="Disable retrieval augmentation or not")
     parser.add_argument("--k", type=int, default=4, help="Number of retrieved captions to use in prefix")
     parser.add_argument("--retrieval_encoder", type=str, default="RN50x64", help="Visual encoder used for retieving captions")
-    parser.add_argument("--captions_path", type=str, default="data/retrieved_caps_resnet50x64.json", help="JSON file with retrieved captions")
+    parser.add_argument("--captions_path", type=str, default="data/retrieved_caps_resnet50x64_new.json", help="JSON file with retrieved captions")
     parser.add_argument("--template_path", type=str, default="src/template.txt", help="TXT file with template")
 
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size; only matter if evaluating a norag model")

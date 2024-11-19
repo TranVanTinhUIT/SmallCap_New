@@ -42,6 +42,46 @@ def prep_strings(text, tokenizer, template=None, retrieved_caps=None, k=None, is
     else:  
         return input_ids, label_ids
 
+def prep_strings_new(text, tokenizer, template=None, retrieved_caps=None, k=None, is_test=False, max_length=None):
+    # retrieved_caps: [{'caption': 'xxxx', distance: xxx}]
+    if is_test:
+        padding = False
+        truncation = False
+    else:
+        padding = True 
+        truncation = True
+    
+    if retrieved_caps is not None:
+        infix = build_infix_from_retrieved_caps(retrieved_caps, k)
+        prefix = template.replace('||', infix)
+    else:
+        prefix = SIMPLE_PREFIX
+
+    prefix_ids = tokenizer.encode(prefix)
+    len_prefix = len(prefix_ids)
+
+    text_ids = tokenizer.encode(text, add_special_tokens=False)
+    if truncation:
+        text_ids = text_ids[:CAPTION_LENGTH]
+    input_ids = prefix_ids + text_ids if not is_test else prefix_ids
+
+    # we ignore the prefix (minus one as the first subtoken in the prefix is not predicted)
+    label_ids = [-100] * (len_prefix - 1) + text_ids + [tokenizer.eos_token_id] 
+    if padding:
+        input_ids += [tokenizer.pad_token_id] * (max_length - len(input_ids))
+        label_ids += [-100] * (max_length - len(label_ids))
+    
+    if is_test:
+        return input_ids
+    else:  
+        return input_ids, label_ids
+
+def build_infix_from_retrieved_caps(retrieved_caps, k):
+  caps = sorted(retrieved_caps, key=lambda x: x["distance"], reverse=True)[:k]
+  prompt = ', \n\n'.join(['"{}" with cosin similariry is {}'.format(cap['caption'], cap['distance']) for cap in caps]) + '.'
+  return prompt
+
+
 def postprocess_preds(pred, tokenizer):
     pred = pred.split(SIMPLE_PREFIX)[-1]
     pred = pred.replace(tokenizer.pad_token, '')
