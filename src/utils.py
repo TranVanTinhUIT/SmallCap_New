@@ -116,10 +116,10 @@ class TrainDataset(Dataset):
         text = self.df['text'][idx]
         if self.rag: 
             caps = self.df['caps'][idx]
-            decoder_input_ids, labels = prep_strings(text, self.tokenizer, template=self.template,
+            decoder_input_ids, labels = prep_strings_new(text, self.tokenizer, template=self.template,
                                                      retrieved_caps=caps, k=self.k, max_length=self.max_target_length)
         else:
-            decoder_input_ids, labels = prep_strings(text, self.tokenizer, max_length=self.max_target_length)
+            decoder_input_ids, labels = prep_strings_new(text, self.tokenizer, max_length=self.max_target_length)
         # load precomputed features
         encoder_outputs = self.features[self.df['cocoid'][idx]][()]
         encoding = {"encoder_outputs": torch.tensor(encoder_outputs), 
