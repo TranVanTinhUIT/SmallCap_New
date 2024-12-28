@@ -91,7 +91,7 @@ def get_model_and_auxiliaries(args):
 
 def get_data(tokenizer, max_length, args):
 
-    data = load_data_for_training(args.annotations_path, args.captions_path)
+    data = load_data_for_training_with_styles(args.annotations_path, args.captions_path, args.style_def_path)
     train_df = pd.DataFrame(data['train'])
 
     if args.ablation_visual:
@@ -166,7 +166,8 @@ if __name__ == '__main__':
     parser.add_argument("--k", type=int, default=4, help="Number of retrieved captions to use in prefix")
     parser.add_argument("--retrieval_encoder", type=str, default="RN50x64", help="Visual encoder used for retieving captions")
     parser.add_argument("--captions_path", type=str, default="data/retrieved_caps_resnet50x64.json", help="JSON file with retrieved captions")
-    parser.add_argument("--template_path", type=str, default="src/template.txt", help="TXT file with template")
+    parser.add_argument("--template_path", type=str, default="src/stylish_template.txt", help="TXT file with template")
+    parser.add_argument("--style_def_path", type=str, default="src/stylish_Definition.json", help="json file define stylish")
 
     parser.add_argument("--n_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")

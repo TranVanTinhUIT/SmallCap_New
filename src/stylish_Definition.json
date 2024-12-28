@@ -1,0 +1,20 @@
+{
+    "length": {
+        "Short": {
+            "min": null,
+            "max": 10 
+        },
+        "Medium":{
+            "min": 11,
+            "max": 16
+        },
+        "Long": {
+            "min": 17,
+            "max": null
+        }
+    },
+    "emotion": {
+        "positive": ["happy", "nice", "awesome", "tasty", "great", "pretty", "beautiful", "cute", "good", "delicious"],
+        "negative": ["stupid", "bad", "lonely", "disgusting", "silly", "dead", "ugly", "crazy", "terrible", "dirty"]
+    }
+}

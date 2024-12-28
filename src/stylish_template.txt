@@ -1,0 +1,3 @@
+Similar images and cosine scores following:
+||
+This {emotion} picture with a {length} caption shows 
